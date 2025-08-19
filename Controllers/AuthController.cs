@@ -3,7 +3,6 @@ using LifeDbApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using NuGet.Common;
 
 namespace LifeDbApi.Controllers;
 
