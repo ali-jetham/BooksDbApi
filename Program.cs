@@ -36,8 +36,8 @@ builder.Services.AddCors(options =>
 		policy =>
 		{
 			policy.WithOrigins(
-				// "http://localhost:5173",
-				// "https://yeti-measured-correctly.ngrok-free.app",
+				"http://localhost:5173",
+				"https://yeti-measured-correctly.ngrok-free.app",
 				"https://lifedb.netlify.app",
 				"https://lifedbapi.onrender.com",
 				"https://booksdb.alijetham.com"

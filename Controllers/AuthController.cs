@@ -46,7 +46,7 @@ public class AuthController : ControllerBase
 				HttpOnly = true,
 				Secure = true,
 				SameSite = SameSiteMode.None,
-				Path = "/api/token",
+				Path = "/api/auth/",
 				Expires = DateTime.UtcNow.AddDays(30),
 			};
 			var accessCookieOptions = new CookieOptions
