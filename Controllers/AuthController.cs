@@ -1,3 +1,4 @@
+using LifeDbApi.Models.Dto;
 using LifeDbApi.Options;
 using LifeDbApi.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -12,17 +13,20 @@ public class AuthController : ControllerBase
 {
 	private readonly ILogger<AuthController> logger;
 	private readonly AuthService authService;
+	private readonly TokenService tokenService;
 	private readonly FrontendOptions frontendOptions;
 
 	public AuthController(
 		ILogger<AuthController> logger,
 		IOptions<FrontendOptions> frontendOptions,
-		AuthService authService
+		AuthService authService,
+		TokenService tokenService
 	)
 	{
 		this.logger = logger;
 		this.frontendOptions = frontendOptions.Value;
 		this.authService = authService;
+		this.tokenService = tokenService;
 	}
 
 	[HttpPost]
@@ -39,7 +43,6 @@ public class AuthController : ControllerBase
 		{
 			var refreshCookieOptions = new CookieOptions
 			{
-				// TODO: change this values in production
 				HttpOnly = true,
 				Secure = true,
 				SameSite = SameSiteMode.None,
@@ -52,6 +55,7 @@ public class AuthController : ControllerBase
 				Secure = true,
 				SameSite = SameSiteMode.None,
 				Path = "/api",
+				Expires = DateTime.UtcNow.AddMinutes(15),
 			};
 			Response.Cookies.Append("refresh_token", result.Value.RefreshToken!, refreshCookieOptions);
 			Response.Cookies.Append("access_token", result.Value.AccessToken!, accessCookieOptions);
@@ -73,6 +77,80 @@ public class AuthController : ControllerBase
 		{
 			return BadRequest();
 		}
+	}
+
+	[HttpGet]
+	[Route("refresh")]
+	public async Task<ActionResult> Refresh()
+	{
+		var refreshToken = Request.Cookies["refresh_token"];
+		if (refreshToken == null)
+		{
+			return Unauthorized("Invalid refresh token");
+		}
+		var result = await tokenService.IssueAccessToken(refreshToken);
+
+		if (result.IsFailed)
+		{
+			return Unauthorized();
+		}
+		else if (result.Value != null)
+		{
+			// TODO: try to reuse this code from AuthController
+			var accessCookieOptions = new CookieOptions
+			{
+				HttpOnly = true,
+				Secure = true,
+				SameSite = SameSiteMode.None,
+				Path = "/api",
+				Expires = DateTime.UtcNow.AddMinutes(15),
+			};
+			Response.Cookies.Append("access_token", result.Value, accessCookieOptions);
+			return Ok();
+		}
+		return BadRequest();
+	}
+
+	[HttpDelete]
+	[Route("logout")]
+	[Authorize]
+	public async Task<ActionResult> Logout()
+	{
+		string? refreshToken = Request.Cookies["refresh_token"];
+		if (refreshToken == null)
+		{
+			return BadRequest("Refresh token expired");
+		}
+		var result = await tokenService.RevokeRefreshToken(refreshToken);
+		if (!result)
+		{
+			return BadRequest("Failed to delete refresh token");
+		}
+		Response.Cookies.Append(
+			"access_token",
+			"",
+			new CookieOptions
+			{
+				Expires = DateTime.UtcNow.AddDays(-1),
+				HttpOnly = true,
+				Secure = true,
+				SameSite = SameSiteMode.None,
+				Path = "/api",
+			}
+		);
+		Response.Cookies.Append(
+			"refresh_token",
+			"",
+			new CookieOptions
+			{
+				Expires = DateTime.UtcNow.AddDays(-1),
+				HttpOnly = true,
+				Secure = true,
+				SameSite = SameSiteMode.None,
+				Path = "/api/auth",
+			}
+		);
+		return Ok(new TokenRevokeResponseDto() { IsRevoked = result });
 	}
 
 	[HttpGet]
