@@ -23,13 +23,13 @@ public class SqlUserRepository(LifeDbContext dbContext) : IUserRepository
 		throw new NotImplementedException();
 	}
 
-	public async Task<Guid?> GetUserIdByRefreshToken(RefreshToken refreshToken)
+	public async Task<User?> GetUserByRefreshToken(RefreshToken refreshToken)
 	{
-		var result = await dbContext.RefreshTokens.FirstOrDefaultAsync(rt =>
-			rt.Id == refreshToken.Id
-		);
+		User? result = await dbContext
+			.Users.Include(u => u.RefreshTokens)
+			.FirstOrDefaultAsync(u => u.RefreshTokens.Any(rt => rt.TokenHash == refreshToken.TokenHash));
 
-		return result?.UserId;
+		return result;
 	}
 
 	public Task<User> GetUserByEmail(string email)

@@ -6,4 +6,5 @@ public class AuthMeResponseDto
 {
 	public string Id { get; set; }
 	public bool IsAuthenticated { get; set; }
+	public required string Name { get; set; }
 }

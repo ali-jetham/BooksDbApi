@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using FluentResults;
 using LifeDbApi.Models.Domain;
 using LifeDbApi.Models.Dto;
@@ -41,7 +40,7 @@ public class TokenService(
 		return token;
 	}
 
-	private string CreateAccessToken(string id)
+	private string CreateAccessToken(string id, string name, string email)
 	{
 		// TODO: replace with options pattern using env vars in prod (not now)
 		string secretKey = configuration["Jwt:Secret"];
@@ -51,8 +50,9 @@ public class TokenService(
 		{
 			Subject = new ClaimsIdentity(
 				[
-					// new Claim(JwtRegisteredClaimNames.Email, email),
 					new Claim(JwtRegisteredClaimNames.Sub, id),
+					new Claim(JwtRegisteredClaimNames.Name, name),
+					new Claim(JwtRegisteredClaimNames.Email, email),
 				]
 			),
 			Expires = DateTime.UtcNow.AddMinutes(20),
@@ -65,28 +65,33 @@ public class TokenService(
 		return token;
 	}
 
-	public async Task<AuthGoogleResponseDto> GenerateTokens(Guid id, string email)
+	public async Task<AuthGoogleResponseDto> IssueTokens(Guid id, string email, string name)
 	{
 		var refreshToken = await CreateRefreshToken(id);
-		string accessToken = CreateAccessToken(id.ToString());
+		string accessToken = CreateAccessToken(id.ToString(), name, email);
 		var tokens = new AuthGoogleResponseDto { AccessToken = accessToken, RefreshToken = refreshToken };
 		return tokens;
 	}
 
-	public async Task<Result<string>> IssueAccessToken(string refreshToken)
+	/// <summary>
+	/// Return new accessToken after validating refreshToken.
+	/// </summary>
+	/// <param name="token">The refreshToken used to validate.</param>
+	/// <returns></returns>
+	public async Task<Result<string>> IssueAccessToken(string token)
 	{
-		RefreshToken? result = await GetRefreshToken(refreshToken);
+		RefreshToken? refreshToken = await GetRefreshToken(token);
 
-		if (result == null || !ValidateRefreshToken(result))
+		if (refreshToken == null || !ValidateRefreshToken(refreshToken))
 		{
 			return Result.Fail("Refresh token has been revoked or expired");
 		}
-		Guid? userId = await userRepository.GetUserIdByRefreshToken(result);
-		if (userId == null)
+		User? user = await userRepository.GetUserByRefreshToken(refreshToken);
+		if (user == null)
 		{
 			return Result.Fail("");
 		}
-		var newAccessToken = CreateAccessToken(userId.ToString()!);
+		var newAccessToken = CreateAccessToken(user.Id.ToString(), user.Name, user.Email);
 		return Result.Ok(newAccessToken);
 	}
 

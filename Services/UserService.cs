@@ -13,13 +13,14 @@ public class UserService(ILogger<UserService> logger, IUserRepository userReposi
 		string email,
 		bool emailVerified,
 		OAuthProvider oAuthProvider,
-		string sub
+		string sub,
+		string name
 	)
 	{
 		User user = new()
 		{
 			Id = Guid.NewGuid(),
-			Name = email.Split("@")[0],
+			Name = name,
 			Email = email,
 			EmailVerified = emailVerified,
 			OAuthProvider = oAuthProvider,

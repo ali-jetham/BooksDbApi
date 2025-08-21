@@ -23,26 +23,28 @@ public class AuthService(
 		try
 		{
 			var payload = await GoogleJsonWebSignature.ValidateAsync(credential);
-			var user = await userRepository.GetUserByEmail(payload.Email);
+			// TODO: NOT use email as identifier use google's sub
+			User? user = await userRepository.GetUserByEmail(payload.Email);
 			if (user == null)
 			{
-				var newUser = await userService.CreateUser(
+				User newUser = await userService.CreateUser(
 					payload.Email,
 					payload.EmailVerified,
 					OAuthProvider.Google,
-					payload.Subject
+					payload.Subject,
+					payload.Name
 				);
 
 				if (newUser == null)
 				{
 					return Result.Fail("Cannot create user");
 				}
-				var tokens = await tokenService.GenerateTokens(newUser.Id, payload.Email);
+				var tokens = await tokenService.IssueTokens(newUser.Id, newUser.Email, newUser.Name);
 				return Result.Ok(tokens);
 			}
 			else if (user != null && user.OAuthProvider == OAuthProvider.Google)
 			{
-				var tokens = await tokenService.GenerateTokens(user.Id, payload.Email);
+				var tokens = await tokenService.IssueTokens(user.Id, user.Email, user.Name);
 				return Result.Ok(tokens);
 			}
 			else
@@ -67,11 +69,19 @@ public class AuthService(
 		var handler = new JsonWebTokenHandler();
 		var jwt = handler.ReadJsonWebToken(accessToken);
 		var subClaim = jwt?.Claims.FirstOrDefault(c => c.Type == "sub");
-		if (subClaim == null)
+		var nameClaim = jwt?.Claims.FirstOrDefault(c => c.Type == "name");
+		if (subClaim == null || nameClaim == null)
 		{
 			return Result.Fail(new Error("sub claim not found in token."));
 		}
 
-		return Result.Ok(new AuthMeResponseDto { IsAuthenticated = true, Id = subClaim.Value });
+		return Result.Ok(
+			new AuthMeResponseDto
+			{
+				IsAuthenticated = true,
+				Id = subClaim.Value,
+				Name = nameClaim.Value,
+			}
+		);
 	}
 }
