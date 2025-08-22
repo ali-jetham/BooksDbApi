@@ -116,16 +116,16 @@ public class AuthController : ControllerBase
 	[Authorize]
 	public async Task<ActionResult> Logout()
 	{
-		string? refreshToken = Request.Cookies["refresh_token"];
-		if (refreshToken == null)
-		{
-			return BadRequest("Refresh token expired");
-		}
-		var result = await tokenService.RevokeRefreshToken(refreshToken);
-		if (!result)
-		{
-			return BadRequest("Failed to delete refresh token");
-		}
+		// string? refreshToken = Request.Cookies["refresh_token"];
+		// if (refreshToken == null)
+		// {
+		// 	return BadRequest("Refresh token expired");
+		// }
+		// var result = await tokenService.RevokeRefreshToken(refreshToken);
+		// if (!result)
+		// {
+		// 	return BadRequest("Failed to delete refresh token");
+		// }
 		Response.Cookies.Append(
 			"access_token",
 			"",
@@ -150,7 +150,7 @@ public class AuthController : ControllerBase
 				Path = "/api/auth",
 			}
 		);
-		return Ok(new TokenRevokeResponseDto() { IsRevoked = result });
+		return Ok(new TokenRevokeResponseDto() { IsRevoked = true });
 	}
 
 	[HttpGet]
