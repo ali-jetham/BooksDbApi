@@ -124,9 +124,9 @@ if (app.Environment.IsDevelopment())
 	app.MapScalarApiReference();
 }
 
+app.UseCors("AllowFrontend");
 app.UseRouting();
 app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

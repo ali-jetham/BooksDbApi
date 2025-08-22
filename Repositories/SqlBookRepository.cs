@@ -17,7 +17,8 @@ public class SqlBookRepository(LifeDbContext dbContext) : IBookRepository
 	public async Task<Book> Create(Book book)
 	{
 		bool exists = await dbContext.Books.AnyAsync(b =>
-			b.Isbn10 == book.Isbn10 || b.Isbn13 == book.Isbn13
+			(book.Isbn10 != null && !string.IsNullOrEmpty(book.Isbn10) && b.Isbn10 == book.Isbn10)
+			|| (book.Isbn13 != null && !string.IsNullOrEmpty(book.Isbn13) && b.Isbn13 == book.Isbn13)
 		);
 		if (exists)
 		{
