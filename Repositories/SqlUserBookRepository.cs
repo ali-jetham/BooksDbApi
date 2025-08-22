@@ -28,6 +28,11 @@ public class SqlUserBookRepository(LifeDbContext dbContext) : IUserBookRepositor
 
 	public async Task<UserBook> Create(UserBook userBook)
 	{
+		bool exists = await dbContext.UserBooks.AnyAsync(ub =>
+			ub.UserId == userBook.UserId && ub.BookId == userBook.BookId
+		);
+		if (exists)
+			throw new InvalidOperationException("This user has already added this book.");
 		var result = dbContext.UserBooks.Add(userBook);
 		await dbContext.SaveChangesAsync();
 		return result.Entity;
