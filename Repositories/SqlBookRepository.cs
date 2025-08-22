@@ -1,4 +1,3 @@
-using System;
 using LifeDbApi.Data;
 using LifeDbApi.Models.Domain;
 using LifeDbApi.Utils;

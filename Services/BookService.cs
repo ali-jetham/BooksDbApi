@@ -95,12 +95,12 @@ public class BookService(
 	private async Task<List<BookSearchResponseDto>> SearchQuery(string query)
 	{
 		List<Book> books = await bookRepository.Search(query.ToLower());
-		var searchResponses = new List<BookSearchResponseDto> { };
+		var internalBooks = new List<BookSearchResponseDto> { };
 		foreach (Book book in books)
 		{
-			searchResponses.Add(BookSearchResponseMapping.Map(book));
+			internalBooks.Add(BookSearchResponseMapping.Map(book));
 		}
-		if (searchResponses.Count == 0)
+		if (internalBooks.Count <= 10)
 		{
 			string q = Uri.EscapeDataString($"title:{query} language:eng");
 			string url = $"https://openlibrary.org/search.json?q={q}&sort=want_to_read&mode=everything";
@@ -126,9 +126,35 @@ public class BookService(
 			List<BookSearchResponseDto> externalBooks = booksJson
 				?.Select(kvp => BookSearchResponseMapping.Map(kvp.Value))
 				.ToList();
-			searchResponses.AddRange(externalBooks);
+			var filteredExternalBooks = externalBooks
+				.Where(externalBook =>
+					!internalBooks.Any(internalBook =>
+						// Match by ISBN first (most reliable)
+						(
+							(
+								!string.IsNullOrEmpty(externalBook.Isbn10)
+								&& !string.IsNullOrEmpty(internalBook.Isbn10)
+								&& externalBook.Isbn10 == internalBook.Isbn10
+							)
+							|| (
+								!string.IsNullOrEmpty(externalBook.Isbn13)
+								&& !string.IsNullOrEmpty(internalBook.Isbn13)
+								&& externalBook.Isbn13 == internalBook.Isbn13
+							)
+							||
+							// If no ISBN match, compare by title
+							(
+								!string.IsNullOrEmpty(externalBook.Title)
+								&& !string.IsNullOrEmpty(internalBook.Title)
+								&& externalBook.Title.Equals(internalBook.Title, StringComparison.OrdinalIgnoreCase)
+							)
+						)
+					)
+				)
+				.ToList();
+			internalBooks.AddRange(filteredExternalBooks);
 		}
-		return searchResponses;
+		return internalBooks;
 	}
 
 	/// <summary>

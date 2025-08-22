@@ -56,8 +56,7 @@ namespace LifeDbApi.Controllers
 			var origin = Request.Headers["Origin"].ToString();
 			if (!string.IsNullOrEmpty(origin))
 			{
-				Response.Headers.Add("Access-Control-Allow-Origin", origin);
-				Response.Headers.Add("Vary", "Origin");
+				return BadRequest();
 			}
 			var result = await bookService.Search(q);
 			return Ok(result);
